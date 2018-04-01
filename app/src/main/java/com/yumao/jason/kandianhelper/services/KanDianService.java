@@ -110,11 +110,11 @@ public class KanDianService extends AccessibilityService {
         //检查是否看够101个视频并且喜欢够15个视频
         Log.d(TAG, "mWatchedCount:" + mWatchedCount + ", mLikedCount:" + mLikedCount);
         // TODO: 18/4/2 退出登录时将mWatchedCount和mLikedCount置为0
-        if (mWatchedCount > KD_WATCHED_TOP_COUNT && mLikedCount > KD_LIKED_TOP_COUNT) {
+        if (isReadyToChangeAccount()) {
             AccessibilityNodeInfo myNode = getNodeByName(TAB_MY);
             Log.d(TAG, "myNode:" + myNode);
             if (myNode != null) {
-                myNode.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                myNode.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
         }
 
@@ -187,6 +187,11 @@ public class KanDianService extends AccessibilityService {
             return;
         }
 
+        //在我的tab下并且需要切换账号
+        if (isInMyPage() && isReadyToChangeAccount()) {
+            printAllChild(rootNodeInfo, 0);
+        }
+
         //在刷新tab下，即视频播放页
         if (isInVideoPage()) {
             //找喜欢Layout,有两个子View,一个ImageView,一个TextView
@@ -229,6 +234,10 @@ public class KanDianService extends AccessibilityService {
         }
     }
 
+    private boolean isReadyToChangeAccount() {
+        return mWatchedCount > KD_WATCHED_TOP_COUNT && mLikedCount > KD_LIKED_TOP_COUNT;
+    }
+
     private boolean isInLoginPage() {
         return mCurrentActivityName.contains(KD_LOGIN_ACTIVITY);
     }
@@ -253,6 +262,25 @@ public class KanDianService extends AccessibilityService {
             if (tabRefreshNode != null) {
                 if (tabRefreshNode.isSelected()) {
                     Log.d(TAG, "当前位置在'刷新tab'或'首页tab'");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isInMyPage() {
+        if (this.rootNodeInfo == null) {
+            return false;
+        }
+        /* 应用首页 */
+        if (mCurrentActivityName.contains(KD_MAIN_ACTIVITY)) {
+            /* 遍历节点匹配我的tab" */
+            AccessibilityNodeInfo tabMyNode = getNodeByName(TAB_MY);
+            Log.d(TAG, "我的tab node:" + tabMyNode);
+            if (tabMyNode != null) {
+                if (tabMyNode.isSelected()) {
+                    Log.d(TAG, "当前位置在'我的tab'");
                     return true;
                 }
             }
