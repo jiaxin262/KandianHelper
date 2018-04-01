@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">看点助手</string>
+    <string name="service_desc">看点视频小助手，开启后可自动点赞，自动滑动页面</string>
+    <string name="open_service">点击开启服务</string>
+    <string name="close_service">点击关闭服务</string>
+    <string name="turn_on_toast">点击看点助手 开启服务</string>
+    <string name="turn_off_toast">点击看点助手 关闭服务</string>
+    <string name="turn_on_error_toast">遇到一些问题,请手动打开系统设置>无障碍服务>看点助手 开启服务</string>
+</resources>
