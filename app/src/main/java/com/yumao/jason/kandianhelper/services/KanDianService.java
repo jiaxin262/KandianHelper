@@ -29,13 +29,17 @@ public class KanDianService extends AccessibilityService {
 
     private static final String QQ_PACKAGE_PREFIX = "com.tencent";
     private static final String QQ_LOGIN_ACTIVITY = "LoginActivity";
+    private static final String QQ_LOGIN_ACTIVITY2 = "Login";
     private static final String QQ_AUTHORITY_ACTIVITY = "AuthorityActivity";
 
     private static final String TAB_FIRST_PAGE = "首页";
     private static final String TAB_REFRESH = "刷新";
     private static final String TAB_MY = "我的";
+    private static final String BTN_LOGOUT = "退出登录";
+    private static final String BTN_CONFIRM = "确定";
     private static final String QQ_LOGIN_BTN_TEXT = "登 录";
     private static final String QQ_LOGIN_AND_AUTHORITY_BTN_TEXT = "登录";
+    private static final String QQ_ADD_ACCOUNT = "添加帐号";
     private static final String QQ_NUM = "245771473";
     private static final String QQ_PASSWORD = "19921115jiaXIN";
 
@@ -48,7 +52,11 @@ public class KanDianService extends AccessibilityService {
     private boolean mHasPostSlideRunnable = false;
     private boolean mQQNumDone = false;
     private boolean mQQPasswordDone = false;
+    private boolean mQQNumDone2 = false;
+    private boolean mQQPasswordDone2 = false;
+    private boolean mHasAddNewAccount = false;
     private boolean mHasPerformHome = false;
+    private boolean mHasClickLogout = false;
 
     private int mWatchedCount = 0;
     private int mLikedCount = 0;
@@ -85,8 +93,9 @@ public class KanDianService extends AccessibilityService {
 
     private void checkIsQQAuthorityPage(final AccessibilityEvent event) {
         if (isInQQAuthorityPage()) {
+            Log.d(TAG, "mHasPerformHome:" + mHasPerformHome);
             if (!mHasPerformHome) {
-                mHasPerformHome = true;  // TODO: 18/4/2 在退出登录时将mHasPerformHome置为false
+                mHasPerformHome = true;
                 performGlobalAction(GLOBAL_ACTION_HOME);
                 performGlobalAction(GLOBAL_ACTION_RECENTS);
                 performGlobalAction(GLOBAL_ACTION_RECENTS);
@@ -109,7 +118,6 @@ public class KanDianService extends AccessibilityService {
 
         //检查是否看够101个视频并且喜欢够15个视频
         Log.d(TAG, "mWatchedCount:" + mWatchedCount + ", mLikedCount:" + mLikedCount);
-        // TODO: 18/4/2 退出登录时将mWatchedCount和mLikedCount置为0
         if (isReadyToChangeAccount()) {
             AccessibilityNodeInfo myNode = getNodeByName(TAB_MY);
             Log.d(TAG, "myNode:" + myNode);
@@ -131,14 +139,15 @@ public class KanDianService extends AccessibilityService {
             return;
         }
 
-        //qq登录页
+        //qq登录页1
         if (isInQQLoginPage()) {
             printAllChild(rootNodeInfo, 0);
             List<AccessibilityNodeInfo> editList = findAllTargetWidget(rootNodeInfo, "android.widget.EditText");
-            if (editList != null && editList.size() > 0) {
+            if (editList != null && editList.size() == 2) {
+                Log.d(TAG, "editList size :" + editList.size());
                 for (int i = 0; i < editList.size(); i++) {
                     AccessibilityNodeInfo qqLoginNode = editList.get(i);
-                    Log.d(TAG, "qq login node text before:" + qqLoginNode.getText());
+                    Log.d(TAG, "qq login node text before:" + i + "-" + qqLoginNode.getText());
                     if (i == 0) {
                         if (!mQQNumDone) {
                             Bundle bundle = new Bundle();
@@ -154,7 +163,7 @@ public class KanDianService extends AccessibilityService {
                             mQQPasswordDone = true;
                         }
                     }
-                    Log.d(TAG, "qq login node text after:" + qqLoginNode.getText());
+                    Log.d(TAG, "qq login node text after:" + i + "-" + qqLoginNode.getText());
                 }
             }
 
@@ -171,9 +180,34 @@ public class KanDianService extends AccessibilityService {
             return;
         }
 
-        //qq登录授权页
-        if (isInQQAuthorityPage()) {
+        //qq登录页2
+        if (isInQQLoginPage2()) {
             printAllChild(rootNodeInfo, 0);
+            List<AccessibilityNodeInfo> editList = findAllTargetWidget(rootNodeInfo, "android.widget.EditText");
+            if (editList != null && editList.size() == 3) {
+                Log.d(TAG, "editList size :" + editList.size());
+                for (int i = 0; i < editList.size(); i++) {
+                    AccessibilityNodeInfo qqLoginNode = editList.get(i);
+                    Log.d(TAG, "qq login node text before:" + i + "-" + qqLoginNode.getText());
+                    if (i == 1) {
+                        if (!mQQNumDone2) {
+                            Bundle bundle = new Bundle();
+                            bundle.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, QQ_NUM);
+                            qqLoginNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle);
+                            mQQNumDone2 = true;
+                        }
+                    } else if (i == 2) {
+                        if (!mQQPasswordDone2) {
+                            Bundle bundle = new Bundle();
+                            bundle.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, QQ_PASSWORD);
+                            qqLoginNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle);
+                            mQQPasswordDone2 = true;
+                        }
+                    }
+                    Log.d(TAG, "qq login node text after:" + i + "-" + qqLoginNode.getText());
+                }
+            }
+
             List<AccessibilityNodeInfo> btnList = findAllTargetWidget(rootNodeInfo, "android.widget.Button");
             if (btnList != null && btnList.size() > 0) {
                 for (int i = 0; i < btnList.size(); i++) {
@@ -181,8 +215,22 @@ public class KanDianService extends AccessibilityService {
                     Log.d(TAG, "loginBtn text:" + loginBtn.getText());
                     if (QQ_LOGIN_AND_AUTHORITY_BTN_TEXT.equals(loginBtn.getText().toString())) {
                         loginBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        mHasAddNewAccount = true;
                     }
                 }
+            }
+            return;
+        }
+
+        //qq登录授权页，添加账号
+        if (isInQQAuthorityPage()) {
+            if (mHasAddNewAccount) {
+                return;
+            }
+            printAllChild(rootNodeInfo, 0);
+            AccessibilityNodeInfo addAccounNode = getNodeByName(QQ_ADD_ACCOUNT);
+            if (addAccounNode != null) {
+                addAccounNode.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
             return;
         }
@@ -190,6 +238,37 @@ public class KanDianService extends AccessibilityService {
         //在我的tab下并且需要切换账号
         if (isInMyPage() && isReadyToChangeAccount()) {
             printAllChild(rootNodeInfo, 0);
+            AccessibilityNodeInfo settingBtn = rootNodeInfo.getChild(2);
+            settingBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            return;
+        }
+
+        //在设置页，退出登录
+        if (isInSettingPage()) {
+            if (mHasClickLogout) { //退出登录确认框
+                AccessibilityNodeInfo confirmBtn = getNodeByName(BTN_CONFIRM);
+                Log.d(TAG, "logout confirm btn:" + confirmBtn);
+                if (confirmBtn != null) {
+                    mHasClickLogout = false;
+                    confirmBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    mHasPerformHome = false;
+                    mHasAddNewAccount = false;
+                    mQQNumDone = false;
+                    mQQPasswordDone = false;
+                    mQQNumDone2 = false;
+                    mQQPasswordDone2 = false;
+                    mLikedCount = 0;
+                    mWatchedCount = 0;
+                }
+            } else { //点击退出登录
+                printAllChild(rootNodeInfo, 0);
+                AccessibilityNodeInfo logoutBtn = getNodeByName(BTN_LOGOUT);
+                if (logoutBtn != null) {
+                    mHasClickLogout = true;
+                    logoutBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                }
+            }
+            return;
         }
 
         //在刷新tab下，即视频播放页
@@ -229,7 +308,6 @@ public class KanDianService extends AccessibilityService {
                 }
             } else {
                 Log.d(TAG, "没找到喜欢按钮!!!");
-                // TODO: 18/3/25 双击手势？
             }
         }
     }
@@ -244,6 +322,10 @@ public class KanDianService extends AccessibilityService {
 
     private boolean isInQQLoginPage() {
         return mCurrentActivityName.contains(QQ_PACKAGE_PREFIX) && mCurrentActivityName.contains(QQ_LOGIN_ACTIVITY);
+    }
+
+    private boolean isInQQLoginPage2() {
+        return mCurrentActivityName.contains(QQ_PACKAGE_PREFIX) && mCurrentActivityName.contains(QQ_LOGIN_ACTIVITY2);
     }
 
     private boolean isInQQAuthorityPage() {
@@ -286,6 +368,10 @@ public class KanDianService extends AccessibilityService {
             }
         }
         return false;
+    }
+
+    private boolean isInSettingPage() {
+        return mCurrentActivityName.contains(KD_SETTING_ACTIVITY);
     }
 
     private void clickLikeButton() {
@@ -360,7 +446,7 @@ public class KanDianService extends AccessibilityService {
             if (nodes != null && !nodes.isEmpty()) {
                 for (int i = 0; i < nodes.size(); i++) {
                     tempNode = nodes.get(i);
-                    if (tempNode != null) {
+                    if (tempNode != null && text.equals(tempNode.getText())) {
                         return tempNode;
                     }
                 }
